@@ -24,6 +24,10 @@ def combine_proofs(clause_set_1, clause_set_2, branch_variable):
 
 
 def sorting_key(tup):
+  '''
+    returns negative of first element in tuple
+    Use: To help in sorting
+  '''
   return -tup[0]
 
 
@@ -67,32 +71,38 @@ def order_proofs(list_of_proof_files):
     
     tup =  (fil+".proof", fil_n+".proof", path+"/")
     if tup not in ord_list:
-      ord_list.append(tup)
+      tup = (fil_n+".proof", fil+".proof", path+"/")
+      if tup not in ord_list:
+        ord_list.append(tup)
     
     temp.sort(key=sorting_key)
   
   return ord_list
      
 def write_proof(f, proof):
+  '''
+  write proof to file
+  '''
   for lemma in proof:
     f.write(lemma)
 
 def write_cnf(f, cnf):
+  '''
+  write cnf formula to file
+  '''
   for clause in cnf:
     f.write(clause +"\n")
 
 if __name__ == "__main__":
   
   if len(sys.argv) != 3:
-    print("Usage: python3 run.py path/to/proof/files path/to/cnf")
+    print("Usage: python3 run.py path/to/cnf path/to/proofs/directory")
     print("Proof files must have extension .proof")
     sys.exit(0)
   
-  path = sys.argv[1]
-  cnf_file = sys.argv[2]
+  cnf_file = sys.argv[1]
+  path = sys.argv[2]
   
-   
-
   path = path if path[-1] == "/" else path+"/"
   files = glob.glob(path+"*.proof")
 
@@ -112,14 +122,46 @@ if __name__ == "__main__":
     print("Proof files not found")
     print("Proof files must have extension .proof")
     sys.exit(0)
+  
+  for fil in files:
+    
+    fil_name = fil.split("/")[-1]
+    decision_lits = fil_name[:-6].split("_")
+    decision_lit = decision_lits[-1] if decision_lits[-1][0]!="n" else "-" + decision_lits[-1][1:]
+    decision_lits_actual = []
 
+    for lit in decision_lits:
+      decision_lits_actual.append(lit if lit[0] != "n" else "-"+ lit[1:])
+
+    with open(cnf_file, "r") as f:
+      cnf_clauses = f.readlines()
+    
+    # updating number of clauses in cnf file
+    for i in range(len(cnf_clauses)):
+      if "p cnf" in cnf_clauses[i]:
+        temp = cnf_clauses[i].split()
+        num_clauses = int(temp[-1])
+        #print(num_clauses)
+        num_clauses = num_clauses + len(decision_lits_actual)
+        temp[-1] = str(num_clauses) + "\n"
+        cnf_clauses[i] = " ".join(temp)
+        break
+    
+    # append path condition to cnf clauses
+    for lit in decision_lits_actual:
+      cnf_clauses.append( lit + " 0")
+
+    # write out the cnf formula with path condition
+    with open("temp.cnf", "w") as f:
+      write_cnf(f,cnf_clauses)
+
+    # optimize the original proofs
+    subprocess.run(["./drat-trim", "temp.cnf", fil, "-l", fil])
+  
   ordered_proof = order_proofs(files)
-  '''
-  for o in ordered_proof:
-    print(o)
-  '''
-  #print(ordered_proof)
-  #sys.exit()
+  #for o in ordered_proof:
+  #  print(o)
+  
   for tup in ordered_proof:
     #read proofs
     proof_file1 = tup[0]
@@ -136,12 +178,14 @@ if __name__ == "__main__":
       proof_out_file = "_".join(decision_lits[:-1]) + ".proof"
     else:
       proof_out_file = "final.proof"
+    
     #print(proof_out_file)
     temp_1 = []
     temp_2 = []
     proof_1 = []
     proof_2 = []
     proof_out = []
+    
     with open(path+proof_file1,"r") as f:
       temp_1 = f.readlines()
 
@@ -161,22 +205,5 @@ if __name__ == "__main__":
     
     with open(path+proof_out_file,"w") as f:
       write_proof(f, proof_out)
-    with open(cnf_file, "r") as f:
-      cnf_clauses = f.readlines()
-    for i in range(len(cnf_clauses)):
-      if "p cnf" in cnf_clauses[i]:
-        temp = cnf_clauses[i].split()
-        num_clauses = int(temp[-1])
-        print(num_clauses)
-        num_clauses = num_clauses + len(decision_lits_except_last)
-        temp[-1] = str(num_clauses) + "\n"
-        cnf_clauses[i] = " ".join(temp)
-        break
-
-    for lit in decision_lits_except_last:
-      cnf_clauses.append( lit + " 0")
-
-    with open("temp.cnf", "w") as f:
-      write_cnf(f,cnf_clauses)
-
-    subprocess.run(["./drat-trim", "temp.cnf", path+proof_out_file, "-l", path+proof_out_file])
+    
+    
