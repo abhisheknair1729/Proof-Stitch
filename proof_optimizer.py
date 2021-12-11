@@ -205,5 +205,30 @@ if __name__ == "__main__":
     
     with open(path+proof_out_file,"w") as f:
       write_proof(f, proof_out)
+ 
+    with open(cnf_file, "r") as f:
+      cnf_clauses = f.readlines()
     
+    # updating number of clauses in cnf file
+    for i in range(len(cnf_clauses)):
+      if "p cnf" in cnf_clauses[i]:
+        temp = cnf_clauses[i].split()
+        num_clauses = int(temp[-1])
+        #print(num_clauses)
+        num_clauses = num_clauses + len(decision_lits_except_last)
+        temp[-1] = str(num_clauses) + "\n"
+        cnf_clauses[i] = " ".join(temp)
+        break
+    
+    # append path condition to cnf clauses
+    for lit in decision_lits_except_last:
+      cnf_clauses.append( lit + " 0")
+
+    # write out the cnf formula with path condition
+    with open("temp.cnf", "w") as f:
+      write_cnf(f,cnf_clauses)
+
+    subprocess.run(["./drat-trim", "temp.cnf", path+proof_out_file, "-l",  path+proof_out_file])
+
+   
     
