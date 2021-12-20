@@ -3,6 +3,7 @@ import sys
 import os
 import shutil
 import subprocess
+import multiprocessing as mp
 
 def combine_proofs(clause_set_1, clause_set_2, branch_variable):
   '''
@@ -28,7 +29,7 @@ def sorting_key(tup):
     returns negative of first element in tuple
     Use: To help in sorting
   '''
-  return -tup[0]
+  return -len(tup[2].split("_"))
 
 
 def order_proofs(list_of_proof_files):
@@ -36,47 +37,35 @@ def order_proofs(list_of_proof_files):
   decides order in which proofs must be combined
   returns: ordered list of tuples denoting proof files to be joined together
   '''
-  temp = []
+  proofs = []
   ord_list = []
   
-  for fil in list_of_proof_files:
-    fil = fil[:-6]
+  for prooffile in list_of_proof_files:
+    prooffile = prooffile[:-6]
+    proofname = prooffile.split("/")[-1]
+    proofs.append(proofname)
     
-    path = "/".join(fil.split("/")[:-1])
+  for proofname in proofs:
+    prooflits = proofname.split("_")
+    lenproof  = len(prooflits)
+    lastlit   = prooflits[-1]
 
-    fil = fil.split("/")[-1]
-    lenfil = len(fil.split("_"))
-    temp.append((len(fil), fil))
-
-  temp.sort(key=sorting_key)
-  
-  for fil_l, fil in temp:
-    fil_temp = fil.split("_")
-    #print(fil_temp)
-    if "_" in fil:
-      fil_n = fil_temp[0] #first literal
-      for l in fil_temp[1:-1]:
-        fil_n = fil_n + "_" + l # second literal to second last literal
-      fil_n = fil_n + "_"
+    if lenproof > 1:
+      proofname_inv = "_".join(prooflits[:-1]) + "_" + (lastlit[1:] if  lastlit[0] == "n" else "n"+lastlit)
+      proofname_stub = "_".join(prooflits[:-1])
     else:
-      fil_n = ""
+      proofname_inv = "n" + prooflits[0] if prooflits[0][0] != "n" else prooflits[0][1:]
+      proofname_stub = ""
+    
+    if proofname_stub != "":
+      proofs.append(proofname_stub)
+    
+    if (proofname, proofname_inv, proofname_stub) not in ord_list:
+      if (proofname_inv, proofname, proofname_stub) not in ord_list:
+        ord_list.append((proofname, proofname_inv, proofname_stub))
 
-    #negation of last literal
-    neg_lit = fil_temp[-1][1:] if fil_temp[-1][0] == "n" else "n" + fil_temp[-1]
-    
-    if fil_n != "":
-      temp.append((len(fil_n),fil_n[:-1])) 
+  ord_list.sort(key = sorting_key)
 
-    fil_n = fil_n + neg_lit # negation of  last literal added
-    
-    tup =  (fil+".proof", fil_n+".proof", path+"/")
-    if tup not in ord_list:
-      tup = (fil_n+".proof", fil+".proof", path+"/")
-      if tup not in ord_list:
-        ord_list.append(tup)
-    
-    temp.sort(key=sorting_key)
-  
   return ord_list
      
 def write_proof(f, proof):
@@ -101,10 +90,11 @@ if __name__ == "__main__":
     sys.exit(0)
   
   cnf_file = sys.argv[1]
-  path = sys.argv[2]
+  proof_path = sys.argv[2]
   
-  path = path if path[-1] == "/" else path+"/"
-  files = glob.glob(path+"*.proof")
+  proof_path = proof_path if proof_path[-1] == "/" else proof_path+"/"
+  
+  proof_files = glob.glob(proof_path+"*.proof")
 
   #print("Making directory temp-work")
   
@@ -113,17 +103,18 @@ if __name__ == "__main__":
 
   os.mkdir("./temp-work")
   
-  for f in files:
+  for f in proof_files:
     shutil.copy(f, "./temp-work/")
   
-  files = glob.glob("./temp-work/*.proof")
+  proof_files = glob.glob("./temp-work/*.proof")
 
-  if files is None:
+  if proof_files is None:
     print("Proof files not found")
     print("Proof files must have extension .proof")
     sys.exit(0)
   
-  for fil in files:
+  process = []
+  for fil in proof_files:
     
     fil_name = fil.split("/")[-1]
     decision_lits = fil_name[:-6].split("_")
@@ -151,66 +142,27 @@ if __name__ == "__main__":
     for lit in decision_lits_actual:
       cnf_clauses.append( lit + " 0")
     
-    #print("Original Proof. Path:")
-    #print(decision_lits_actual)
-
     # write out the cnf formula with path condition
-    with open("temp.cnf", "w") as f:
+    cnf_name = "./temp-work/"+fil_name+".cnf"
+    with open(cnf_name, "w") as f:
       write_cnf(f,cnf_clauses)
     
     with open(fil, "r") as f:
       proof_lemmas = f.readlines()
     
-    avg_lemma_size = 0.0
-    
-    for lemma in proof_lemmas:
-      avg_lemma_size = avg_lemma_size + len(lemma.split())
-    
-    avg_lemma_size= avg_lemma_size/len(proof_lemmas)
-
-    # optimize the original proofs
-    result = subprocess.run(["./drat-trim", "temp.cnf", fil, "-l", fil], stdout=subprocess.PIPE, universal_newlines=True )
-    data = result.stdout
-    data = data.split("\n")
-    if len(data) > 7:
-      print_data = [cnf_file.split("/")[-1], fil.split("/")[-1][:-6],    str(avg_lemma_size)]
-      for i in range(len(data)):
-        data[i] = data[i].split()
-        if i == 0:
-          #print("Variables:{}, Clauses:{}".format(data[i][5],data[i][8]))
-          print_data.append(data[i][5])
-          print_data.append(data[i][8])
-        elif i == 3:
-          #print("Core Clauses:{}, Total Clauses:{}".format(data[i][1], data[i][3]))
-          print_data.append(data[i][1])
-          print_data.append(data[i][3])
-        elif i == 4:
-          #print("Core Lemmas:{}, Total Lemmas:{}, Resolution:{}".format(data[i][1], data[i][3], data[i][8]))
-          print_data.append(data[i][1])
-          print_data.append(data[i][3])
-          print_data.append(data[i][8])
-        elif i == 7:
-          #print("Verifiation Time:{}".format(data[i][3]))
-          print_data.append(data[i][3])
-      result2 = subprocess.run(["./drat-trim", "temp.cnf", fil],  stdout=subprocess.PIPE, universal_newlines=True ) 
-      data2 = result2.stdout
-      data2 = data2.split("\n")
-      if len(data2) > 7:
-        data2[7] = data2[7].split()
-        print_data.append(data2[7][3])
-      
-      print(",".join(print_data))
-    #print(result)
-   
-  ordered_proof = order_proofs(files)
+    process.append(subprocess.Popen(["./drat-trim", cnf_name, fil, "-l",  fil]))
+  
+  for proc in process:
+    proc.wait()
+  
+  ordered_proof = order_proofs(proof_files)
   #for o in ordered_proof:
   #  print(o)
-  
+  process = [] 
   for tup in ordered_proof:
     #read proofs
-    proof_file1 = tup[0]
-    proof_file2 = tup[1]
-    path = tup[2]
+    proof_file1 = tup[0] + ".proof"
+    proof_file2 = tup[1] + ".proof"
     decision_lits = proof_file1[:-6].split("_")
     decision_lit = decision_lits[-1] if decision_lits[-1][0]!="n" else "-" + decision_lits[-1][1:]
     decision_lits_except_last = []
@@ -230,10 +182,10 @@ if __name__ == "__main__":
     proof_2 = []
     proof_out = []
     
-    with open(path+proof_file1,"r") as f:
+    with open("./temp-work/"+proof_file1,"r") as f:
       temp_1 = f.readlines()
 
-    with open(path+proof_file2,"r") as f:
+    with open("./temp-work/"+proof_file2,"r") as f:
       temp_2 = f.readlines()
     
     # delete deletion clauses
@@ -247,7 +199,7 @@ if __name__ == "__main__":
 
     proof_out = combine_proofs(proof_1, proof_2, decision_lit)
     
-    with open(path+proof_out_file,"w") as f:
+    with open("./temp-work/"+proof_out_file,"w") as f:
       write_proof(f, proof_out)
  
     with open(cnf_file, "r") as f:
@@ -269,48 +221,9 @@ if __name__ == "__main__":
       cnf_clauses.append( lit + " 0")
 
     # write out the cnf formula with path condition
-    with open("temp.cnf", "w") as f:
+    cnf_name = "./temp-work/"+proof_out_file+".cnf"
+    with open(cnf_name, "w") as f:
       write_cnf(f,cnf_clauses)
     
-    avg_lemma_size = 0.0
-    
-    for lemma in proof_out:
-      avg_lemma_size = avg_lemma_size + len(lemma.split())
-    
-    avg_lemma_size= avg_lemma_size/len(proof_lemmas)
-
-
-    result = subprocess.run(["./drat-trim", "temp.cnf", path+proof_out_file, "-l", path+proof_out_file], stdout=subprocess.PIPE, universal_newlines=True)
-    data = result.stdout
-    data = data.split("\n")
-    if len(data) > 7:
-      print_data = [cnf_file.split("/")[-1], proof_out_file[:-6],  str(avg_lemma_size)]
-      for i in range(len(data)):
-        data[i] = data[i].split()
-        if i == 0:
-          #print("Variables:{}, Clauses:{}".format(data[i][5],data[i][8]))
-          print_data.append(data[i][5])
-          print_data.append(data[i][8])
-        if i == 3:
-          #print("Core Clauses:{}, Total Clauses:{}".format(data[i][1], data[i][3]))
-          print_data.append(data[i][1])
-          print_data.append(data[i][3])
-        if i == 4:
-          #print("Core Lemmas:{}, Total Lemmas:{}, Resolution:{}".format(data[i][1], data[i][3], data[i][8]))
-          print_data.append(data[i][1])
-          print_data.append(data[i][3])
-          print_data.append(data[i][8])
-        if i == 7:
-          #print("Verifiation Time:{}".format(data[i][3]))
-          print_data.append(data[i][3])
-      result2 = subprocess.run(["./drat-trim", "temp.cnf", path+proof_out_file], stdout=subprocess.PIPE, universal_newlines=True)
-      data2 = result2.stdout
-      data2 = data2.split("\n")
-      if len(data2) > 7:
-        data2[7] = data2[7].split()
-        print_data.append(data2[7][3])
-
-      print(",".join(print_data))
-
-   
-    
+    subprocess.run(["./drat-trim", cnf_name, "./temp-work/"+proof_out_file, "-l", "./temp-work/"+proof_out_file])
+        
