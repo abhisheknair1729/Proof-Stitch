@@ -106,7 +106,7 @@ if __name__ == "__main__":
   path = path if path[-1] == "/" else path+"/"
   files = glob.glob(path+"*.proof")
 
-  #print("Making directory temp-work")
+  print("Making directory temp-work")
   
   if os.path.exists("./temp-work"):
     shutil.rmtree("./temp-work")
@@ -151,39 +151,16 @@ if __name__ == "__main__":
     for lit in decision_lits_actual:
       cnf_clauses.append( lit + " 0")
     
-    #print("Original Proof. Path:")
-    #print(decision_lits_actual)
+    print("Original Proof. Path:")
+    print(decision_lits_actual)
 
     # write out the cnf formula with path condition
     with open("temp.cnf", "w") as f:
       write_cnf(f,cnf_clauses)
 
     # optimize the original proofs
-    result = subprocess.run(["./drat-trim", "temp.cnf", fil, "-l", fil], stdout=subprocess.PIPE, universal_newlines=True )
-    data = result.stdout
-    data = data.split("\n")
-    print_data = [cnf_file.split("/")[-1], fil.split("/")[-1][:-6]]
-    for i in range(len(data)):
-      data[i] = data[i].split()
-      if i == 0:
-        #print("Variables:{}, Clauses:{}".format(data[i][5],data[i][8]))
-        print_data.append(data[i][5])
-        print_data.append(data[i][8])
-      if i == 3:
-        #print("Core Clauses:{}, Total Clauses:{}".format(data[i][1], data[i][3]))
-        print_data.append(data[i][1])
-        print_data.append(data[i][3])
-      if i == 4:
-        #print("Core Lemmas:{}, Total Lemmas:{}, Resolution:{}".format(data[i][1], data[i][3], data[i][8]))
-        print_data.append(data[i][1])
-        print_data.append(data[i][3])
-        print_data.append(data[i][8])
-      if i == 7:
-        #print("Verifiation Time:{}".format(data[i][3]))
-        print_data.append(data[i][3])
-    print(",".join(print_data))
-    #print(result)
-   
+    #subprocess.run(["./drat-trim", "temp.cnf", fil, "-l", fil])
+  
   ordered_proof = order_proofs(files)
   #for o in ordered_proof:
   #  print(o)
@@ -254,29 +231,7 @@ if __name__ == "__main__":
     with open("temp.cnf", "w") as f:
       write_cnf(f,cnf_clauses)
 
-    result = subprocess.run(["./drat-trim", "temp.cnf", path+proof_out_file, "-l", path+proof_out_file], stdout=subprocess.PIPE, universal_newlines=True)
-    data = result.stdout
-    data = data.split("\n")
-    print_data = [cnf_file.split("/")[-1], proof_out_file[:-6]]
-    for i in range(len(data)):
-      data[i] = data[i].split()
-      if i == 0:
-        #print("Variables:{}, Clauses:{}".format(data[i][5],data[i][8]))
-        print_data.append(data[i][5])
-        print_data.append(data[i][8])
-      if i == 3:
-        #print("Core Clauses:{}, Total Clauses:{}".format(data[i][1], data[i][3]))
-        print_data.append(data[i][1])
-        print_data.append(data[i][3])
-      if i == 4:
-        #print("Core Lemmas:{}, Total Lemmas:{}, Resolution:{}".format(data[i][1], data[i][3], data[i][8]))
-        print_data.append(data[i][1])
-        print_data.append(data[i][3])
-        print_data.append(data[i][8])
-      if i == 7:
-        #print("Verifiation Time:{}".format(data[i][3]))
-        print_data.append(data[i][3])
-    print(",".join(print_data))
+    #subprocess.run(["./drat-trim", "temp.cnf", path+proof_out_file, "-l",  path+proof_out_file])
 
    
     
