@@ -162,26 +162,27 @@ if __name__ == "__main__":
     result = subprocess.run(["./drat-trim", "temp.cnf", fil, "-l", fil], stdout=subprocess.PIPE, universal_newlines=True )
     data = result.stdout
     data = data.split("\n")
-    print_data = [cnf_file.split("/")[-1], fil.split("/")[-1][:-6]]
-    for i in range(len(data)):
-      data[i] = data[i].split()
-      if i == 0:
-        #print("Variables:{}, Clauses:{}".format(data[i][5],data[i][8]))
-        print_data.append(data[i][5])
-        print_data.append(data[i][8])
-      if i == 3:
-        #print("Core Clauses:{}, Total Clauses:{}".format(data[i][1], data[i][3]))
-        print_data.append(data[i][1])
-        print_data.append(data[i][3])
-      if i == 4:
-        #print("Core Lemmas:{}, Total Lemmas:{}, Resolution:{}".format(data[i][1], data[i][3], data[i][8]))
-        print_data.append(data[i][1])
-        print_data.append(data[i][3])
-        print_data.append(data[i][8])
-      if i == 7:
-        #print("Verifiation Time:{}".format(data[i][3]))
-        print_data.append(data[i][3])
-    print(",".join(print_data))
+    if len(data) > 7:
+      print_data = [cnf_file.split("/")[-1], fil.split("/")[-1][:-6]]
+      for i in range(len(data)):
+        data[i] = data[i].split()
+        if i == 0:
+          #print("Variables:{}, Clauses:{}".format(data[i][5],data[i][8]))
+          print_data.append(data[i][5])
+          print_data.append(data[i][8])
+        elif i == 3:
+          #print("Core Clauses:{}, Total Clauses:{}".format(data[i][1], data[i][3]))
+          print_data.append(data[i][1])
+          print_data.append(data[i][3])
+        elif i == 4:
+          #print("Core Lemmas:{}, Total Lemmas:{}, Resolution:{}".format(data[i][1], data[i][3], data[i][8]))
+          print_data.append(data[i][1])
+          print_data.append(data[i][3])
+          print_data.append(data[i][8])
+        elif i == 7:
+          #print("Verifiation Time:{}".format(data[i][3]))
+          print_data.append(data[i][3])
+      print(",".join(print_data))
     #print(result)
    
   ordered_proof = order_proofs(files)
@@ -257,26 +258,27 @@ if __name__ == "__main__":
     result = subprocess.run(["./drat-trim", "temp.cnf", path+proof_out_file, "-l", path+proof_out_file], stdout=subprocess.PIPE, universal_newlines=True)
     data = result.stdout
     data = data.split("\n")
-    print_data = [cnf_file.split("/")[-1], proof_out_file[:-6]]
-    for i in range(len(data)):
-      data[i] = data[i].split()
-      if i == 0:
-        #print("Variables:{}, Clauses:{}".format(data[i][5],data[i][8]))
-        print_data.append(data[i][5])
-        print_data.append(data[i][8])
-      if i == 3:
-        #print("Core Clauses:{}, Total Clauses:{}".format(data[i][1], data[i][3]))
-        print_data.append(data[i][1])
-        print_data.append(data[i][3])
-      if i == 4:
-        #print("Core Lemmas:{}, Total Lemmas:{}, Resolution:{}".format(data[i][1], data[i][3], data[i][8]))
-        print_data.append(data[i][1])
-        print_data.append(data[i][3])
-        print_data.append(data[i][8])
-      if i == 7:
-        #print("Verifiation Time:{}".format(data[i][3]))
-        print_data.append(data[i][3])
-    print(",".join(print_data))
+    if len(data) > 7:
+      print_data = [cnf_file.split("/")[-1], proof_out_file[:-6]]
+      for i in range(len(data)):
+        data[i] = data[i].split()
+        if i == 0:
+          #print("Variables:{}, Clauses:{}".format(data[i][5],data[i][8]))
+          print_data.append(data[i][5])
+          print_data.append(data[i][8])
+        if i == 3:
+          #print("Core Clauses:{}, Total Clauses:{}".format(data[i][1], data[i][3]))
+          print_data.append(data[i][1])
+          print_data.append(data[i][3])
+        if i == 4:
+          #print("Core Lemmas:{}, Total Lemmas:{}, Resolution:{}".format(data[i][1], data[i][3], data[i][8]))
+          print_data.append(data[i][1])
+          print_data.append(data[i][3])
+          print_data.append(data[i][8])
+        if i == 7:
+          #print("Verifiation Time:{}".format(data[i][3]))
+          print_data.append(data[i][3])
+      print(",".join(print_data))
 
    
     
