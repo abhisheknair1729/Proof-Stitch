@@ -157,13 +157,23 @@ if __name__ == "__main__":
     # write out the cnf formula with path condition
     with open("temp.cnf", "w") as f:
       write_cnf(f,cnf_clauses)
+    
+    with open(fil, "r") as f:
+      proof_lemmas = f.readlines()
+    
+    avg_lemma_size = 0.0
+    
+    for lemma in proof_lemmas:
+      avg_lemma_size = avg_lemma_size + len(lemma.split())
+    
+    avg_lemma_size= avg_lemma_size/len(proof_lemmas)
 
     # optimize the original proofs
     result = subprocess.run(["./drat-trim", "temp.cnf", fil, "-l", fil], stdout=subprocess.PIPE, universal_newlines=True )
     data = result.stdout
     data = data.split("\n")
     if len(data) > 7:
-      print_data = [cnf_file.split("/")[-1], fil.split("/")[-1][:-6]]
+      print_data = [cnf_file.split("/")[-1], fil.split("/")[-1][:-6],    str(avg_lemma_size)]
       for i in range(len(data)):
         data[i] = data[i].split()
         if i == 0:
@@ -182,6 +192,13 @@ if __name__ == "__main__":
         elif i == 7:
           #print("Verifiation Time:{}".format(data[i][3]))
           print_data.append(data[i][3])
+      result2 = subprocess.run(["./drat-trim", "temp.cnf", fil],  stdout=subprocess.PIPE, universal_newlines=True ) 
+      data2 = result2.stdout
+      data2 = data2.split("\n")
+      if len(data2) > 7:
+        data2[7] = data2[7].split()
+        print_data.append(data2[7][3])
+      
       print(",".join(print_data))
     #print(result)
    
@@ -254,12 +271,20 @@ if __name__ == "__main__":
     # write out the cnf formula with path condition
     with open("temp.cnf", "w") as f:
       write_cnf(f,cnf_clauses)
+    
+    avg_lemma_size = 0.0
+    
+    for lemma in proof_out:
+      avg_lemma_size = avg_lemma_size + len(lemma.split())
+    
+    avg_lemma_size= avg_lemma_size/len(proof_lemmas)
+
 
     result = subprocess.run(["./drat-trim", "temp.cnf", path+proof_out_file, "-l", path+proof_out_file], stdout=subprocess.PIPE, universal_newlines=True)
     data = result.stdout
     data = data.split("\n")
     if len(data) > 7:
-      print_data = [cnf_file.split("/")[-1], proof_out_file[:-6]]
+      print_data = [cnf_file.split("/")[-1], proof_out_file[:-6],  str(avg_lemma_size)]
       for i in range(len(data)):
         data[i] = data[i].split()
         if i == 0:
@@ -278,6 +303,13 @@ if __name__ == "__main__":
         if i == 7:
           #print("Verifiation Time:{}".format(data[i][3]))
           print_data.append(data[i][3])
+      result2 = subprocess.run(["./drat-trim", "temp.cnf", path+proof_out_file], stdout=subprocess.PIPE, universal_newlines=True)
+      data2 = result2.stdout
+      data2 = data2.split("\n")
+      if len(data2) > 7:
+        data2[7] = data2[7].split()
+        print_data.append(data2[7][3])
+
       print(",".join(print_data))
 
    
