@@ -29,7 +29,7 @@ def sorting_key(tup):
     returns negative of first element in tuple
     Use: To help in sorting
   '''
-  return -len(tup[2].split("_"))
+  return -tup[3]
 
 
 def order_proofs(list_of_proof_files):
@@ -62,7 +62,9 @@ def order_proofs(list_of_proof_files):
     
     if (proofname, proofname_inv, proofname_stub) not in ord_list:
       if (proofname_inv, proofname, proofname_stub) not in ord_list:
-        ord_list.append((proofname, proofname_inv, proofname_stub))
+        prooflen = len(proofname_stub.split("_"))
+        #print(proofname_stub)
+        ord_list.append((proofname, proofname_inv, proofname_stub, prooflen))
 
   ord_list.sort(key = sorting_key)
 
@@ -150,7 +152,7 @@ if __name__ == "__main__":
     with open(fil, "r") as f:
       proof_lemmas = f.readlines()
     
-    process.append(subprocess.Popen(["./drat-trim", cnf_name, fil, "-l",  fil]))
+    process.append(subprocess.Popen(["./drat-trim", cnf_name, fil, "-l",  fil],stdout=subprocess.PIPE))
   
   for proc in process:
     proc.wait()
@@ -158,11 +160,26 @@ if __name__ == "__main__":
   ordered_proof = order_proofs(proof_files)
   #for o in ordered_proof:
   #  print(o)
-  process = [] 
+  process = []
+  curr_lvl = -1
+  level = ordered_proof[0][3]
+
   for tup in ordered_proof:
     #read proofs
     proof_file1 = tup[0] + ".proof"
     proof_file2 = tup[1] + ".proof"
+    
+    curr_lvl = tup[3]
+    print(curr_lvl) 
+    if curr_lvl < level:
+      #wait for previous processes to complete
+      print(process)
+      for proc in process:
+        proc.wait()
+
+      level = curr_lvl
+      process = []
+
     decision_lits = proof_file1[:-6].split("_")
     decision_lit = decision_lits[-1] if decision_lits[-1][0]!="n" else "-" + decision_lits[-1][1:]
     decision_lits_except_last = []
@@ -225,5 +242,5 @@ if __name__ == "__main__":
     with open(cnf_name, "w") as f:
       write_cnf(f,cnf_clauses)
     
-    subprocess.run(["./drat-trim", cnf_name, "./temp-work/"+proof_out_file, "-l", "./temp-work/"+proof_out_file])
+    process.append(subprocess.Popen(["./drat-trim", cnf_name, "./temp-work/"+proof_out_file, "-l", "./temp-work/"+proof_out_file],stdout=subprocess.PIPE))
         
