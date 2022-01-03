@@ -95,6 +95,7 @@ def write_cnf(f, cnf):
   for clause in cnf:
     f.write(clause +"\n")
 
+
 def split_lits( lit_string ):
   '''
   returns list of literals from string
@@ -104,6 +105,7 @@ def split_lits( lit_string ):
   lit_list = [l if l[0] != "n" else "-"+l[1:] for l in lit_list]
   
   return lit_list
+
 
 def create_cnf( cnf_file, lits, is_leaf ):
   '''
@@ -143,7 +145,8 @@ def create_cnf( cnf_file, lits, is_leaf ):
     write_cnf( f, cnf_clauses )
   
   return cnf_name
-  
+
+
 def optimize_orig_proofs( proof_list, cnf_file ):
   '''
   Optimizes original proofs by running drat-trim
@@ -160,9 +163,12 @@ def optimize_orig_proofs( proof_list, cnf_file ):
   
   for proc in process:
     proc.wait()
-  
+
+
 def compute_avg_lemma_length( lemmas ):
-  
+  '''
+  Computes average length of lemmas
+  '''
   avg_lemma_length = 0.0
 
   for lemma in lemmas:
@@ -171,7 +177,7 @@ def compute_avg_lemma_length( lemmas ):
   return avg_lemma_length/len(lemmas)
   
 
-def generate_final_proof( ordered_proofs, cnf_name , LEMMA_LENGTH ):
+def generate_final_proof( ordered_proofs, cnf_name, LEMMA_LENGTH, verbose ):
   
   process  = []
   level    = ordered_proofs[0][3]
@@ -186,7 +192,6 @@ def generate_final_proof( ordered_proofs, cnf_name , LEMMA_LENGTH ):
     proof_comb  = []
     
     if curr_lvl < level:            #wait for previous processes to complete
-      print(level)
       level   = curr_lvl
       for proc in process:
         proc.wait()
@@ -214,8 +219,42 @@ def generate_final_proof( ordered_proofs, cnf_name , LEMMA_LENGTH ):
     cnf_name = create_cnf( cnf_file, tup[0], False)
 
     if avg_lemma_length > LEMMA_LENGTH:
-      result = process.append( subprocess.Popen(["./drat-trim", cnf_name, proof_path+proof_out_file, "-l", proof_path+proof_out_file], stdout=subprocess.PIPE ) )
-    
+      if verbose == 0:
+        process.append( subprocess.Popen(["./drat-trim", cnf_name, proof_path+proof_out_file, "-l", proof_path+proof_out_file], stdout=subprocess.DEVNULL ) )
+      
+    if verbose == 1:
+      result = subprocess.run(["./drat-trim", cnf_name, proof_path+proof_out_file, "-l", proof_path+proof_out_file],     stdout=subprocess.PIPE, universal_newlines=True )
+      data = result.stdout
+      data = data.split("\n")
+      if len(data) > 7:
+        print_data = [cnf_file.split("/")[-1], proof_out_file.split("/")[-1][:-6], str(avg_lemma_length)]
+        for i in range(len(data)):
+          data[i] = data[i].split()
+          if i == 0:
+            #print("Variables:{}, Clauses:{}".format(data[i][5],data[i][8]))
+            print_data.append(data[i][5])
+            print_data.append(data[i][8])
+          elif i == 3:
+            #print("Core Clauses:{}, Total Clauses:{}".format(data[i][1], data[i][3]))
+            print_data.append(data[i][1])
+            print_data.append(data[i][3])
+          elif i == 4:
+            #print("Core Lemmas:{}, Total Lemmas:{}, Resolution:{}".format(data[i][1], data[i][3], data[i][8]))
+            print_data.append(data[i][1])
+            print_data.append(data[i][3])
+            print_data.append(data[i][8])
+          elif i == 7:
+            #print("Verifiation Time:{}".format(data[i][3]))
+            print_data.append(data[i][3])
+        result2 = subprocess.run(["./drat-trim", cnf_name, proof_path+proof_out_file],  stdout=subprocess.PIPE, universal_newlines=True ) 
+        data2 = result2.stdout
+        data2 = data2.split("\n")
+        if len(data2) > 7:
+          data2[7] = data2[7].split()
+          print_data.append(data2[7][3])
+        
+        print(",".join(print_data))
+   
   for proc in process:
     proc.wait()
 
