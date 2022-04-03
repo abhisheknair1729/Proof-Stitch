@@ -242,37 +242,7 @@ def generate_final_proof( ordered_proofs, cnf_name, LEMMA_LENGTH, optimize ):
         process.append( subprocess.Popen(["./drat-trim", cnf_name, proof_path+proof_out_file, "-l", proof_path+proof_out_file], stdout=subprocess.DEVNULL ) )
       
     if optimize == 2:
-      result = subprocess.run(["./drat-trim", cnf_name, proof_path+proof_out_file, "-l", proof_path+proof_out_file],     stdout=subprocess.PIPE, universal_newlines=True )
-      data = result.stdout
-      data = data.split("\n")
-      if len(data) > 7:
-        print_data = [cnf_file.split("/")[-1], proof_out_file.split("/")[-1][:-6], str(avg_lemma_length)]
-        for i in range(len(data)):
-          data[i] = data[i].split()
-          if i == 0:
-            #print("Variables:{}, Clauses:{}".format(data[i][5],data[i][8]))
-            print_data.append(data[i][5])
-            print_data.append(data[i][8])
-          elif i == 3:
-            #print("Core Clauses:{}, Total Clauses:{}".format(data[i][1], data[i][3]))
-            print_data.append(data[i][1])
-            print_data.append(data[i][3])
-          elif i == 4:
-            #print("Core Lemmas:{}, Total Lemmas:{}, Resolution:{}".format(data[i][1], data[i][3], data[i][8]))
-            print_data.append(data[i][1])
-            print_data.append(data[i][3])
-            print_data.append(data[i][8])
-          elif i == 7:
-            #print("Verifiation Time:{}".format(data[i][3]))
-            print_data.append(data[i][3])
-        result2 = subprocess.run(["./drat-trim", cnf_name, proof_path+proof_out_file],  stdout=subprocess.PIPE, universal_newlines=True ) 
-        data2 = result2.stdout
-        data2 = data2.split("\n")
-        if len(data2) > 7:
-          data2[7] = data2[7].split()
-          print_data.append(data2[7][3])
-        
-        print(",".join(print_data))
+      process.append( subprocess.Popen(["./drat-trim", cnf_name, proof_path+proof_out_file, "-l", proof_path+proof_out_file],  stdout=subprocess.DEVNULL ))
    
   for proc in process:
     proc.wait()
@@ -281,17 +251,20 @@ def generate_final_proof( ordered_proofs, cnf_name, LEMMA_LENGTH, optimize ):
 if __name__ == "__main__":
   
   if len(sys.argv) != 4:
-    print("Usage: python3 run.py path/to/cnf path/to/proofs/directory optimize (0, 1, 2)")
+    print("")
+    print("Usage: python3 proof_optimizer.py path/to/cnf path/to/proofs/directory optimize (0, 1, 2)")
+    print("")
     print("Optimize = 0: No optimization")
     print("Optimize = 1: Intelligent Optimization using Heuristics")
     print("Optimize = 2: Maximum Optimization (Very slow)")
+    print("")
     print("Proof files must have extension .proof")
     sys.exit(0)
   
   cnf_file     = sys.argv[1]
   proof_path   = sys.argv[2]
   optimize     = int(sys.argv[3])
-  LEMMA_LENGTH = 10 
+  LEMMA_LENGTH = 10  #default value 
   proof_path   = proof_path if proof_path[-1] == "/" else proof_path+"/"
   
   proof_files = glob.glob(proof_path+"*.proof")
