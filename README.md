@@ -19,12 +19,12 @@ Clone repository to any linux-based system
 
 OPTIMIZATION LEVEL : <0, 1, 2>  
 0: No Optimization. All proofs in directory are concatenated together without attempting to reduce their size  
-1: Intelligent Optimization. Proofs are concatenated and then a heuristic is applied to determine if redundant clauses will be removed  
+1: Intelligent Optimization. Proofs are concatenated and then a heuristic is applied to determine if redundant clauses should be removed  
 2: Maximum Optimization. Proofs are concatenated and redundant clauses are removed  
 
 #### Example
   
-  python3 proof_optimizer.py example/cnf/random_ksat.dimacs example/proof/ 0
+    python3 proof_optimizer.py example/cnf/random_ksat.dimacs example/proof/ 0
 
 ### Contributers
 
