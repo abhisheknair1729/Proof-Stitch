@@ -176,9 +176,28 @@ def compute_avg_lemma_length( lemmas ):
 
   return avg_lemma_length/len(lemmas)
   
+def find_global_avg( proof_files ):
+  '''
+  computes avg lemma lenght of all proofs
+  TODO: remove deletion information from lemma before using it
+  '''
+  avg_length = 0.0
 
-def generate_final_proof( ordered_proofs, cnf_name, LEMMA_LENGTH, verbose ):
-  
+  for filename in proof_files:
+    with open(filename, "r") as f:
+      lemmas  = f.readlines()
+      avg_length = avg_length + compute_avg_lemma_length( lemmas )
+
+  return avg_length
+
+
+def generate_final_proof( ordered_proofs, cnf_name, LEMMA_LENGTH, optimize ):
+  '''
+  Main function to compute final optimized proof
+  runs drat-trim always if optimize = 2
+  runs drat-trim intelligently if optimize = 1
+  never runs drat-trim if optimize = 0
+  '''
   process  = []
   level    = ordered_proofs[0][3]
   
@@ -219,10 +238,10 @@ def generate_final_proof( ordered_proofs, cnf_name, LEMMA_LENGTH, verbose ):
     cnf_name = create_cnf( cnf_file, tup[0], False)
 
     if avg_lemma_length > LEMMA_LENGTH:
-      if verbose == 0:
+      if optimize == 1:
         process.append( subprocess.Popen(["./drat-trim", cnf_name, proof_path+proof_out_file, "-l", proof_path+proof_out_file], stdout=subprocess.DEVNULL ) )
       
-    if verbose == 1:
+    if optimize == 2:
       result = subprocess.run(["./drat-trim", cnf_name, proof_path+proof_out_file, "-l", proof_path+proof_out_file],     stdout=subprocess.PIPE, universal_newlines=True )
       data = result.stdout
       data = data.split("\n")
@@ -262,23 +281,25 @@ def generate_final_proof( ordered_proofs, cnf_name, LEMMA_LENGTH, verbose ):
 if __name__ == "__main__":
   
   if len(sys.argv) != 4:
-    print("Usage: python3 run.py path/to/cnf path/to/proofs/directory verbose (0 or 1)")
+    print("Usage: python3 run.py path/to/cnf path/to/proofs/directory optimize (0, 1, 2)")
+    print("Optimize = 0: No optimization")
+    print("Optimize = 1: Intelligent Optimization using Heuristics")
+    print("Optimize = 2: Maximum Optimization (Very slow)")
     print("Proof files must have extension .proof")
     sys.exit(0)
   
   cnf_file     = sys.argv[1]
   proof_path   = sys.argv[2]
-  verbose      = int(sys.argv[3])
+  optimize     = int(sys.argv[3])
   LEMMA_LENGTH = 10 
   proof_path   = proof_path if proof_path[-1] == "/" else proof_path+"/"
   
   proof_files = glob.glob(proof_path+"*.proof")
   
+  # Move all files to temp-work dir
   if os.path.exists("./temp-work"):
     shutil.rmtree("./temp-work")
-
   os.mkdir("./temp-work")
-  
   for f in proof_files:
     shutil.copy(f, "./temp-work/")
   
@@ -290,150 +311,15 @@ if __name__ == "__main__":
     sys.exit(0)
   
   optimize_orig_proofs( proof_files, cnf_file )
-  '''
-  process = []
-  for fil in proof_files:
-    
-    fil_name = fil.split("/")[-1]
-    decision_lits = fil_name[:-6].split("_")
-    decision_lit = decision_lits[-1] if decision_lits[-1][0]!="n" else "-" + decision_lits[-1][1:]
-    decision_lits_actual = []
-
-    for lit in decision_lits:
-      decision_lits_actual.append(lit if lit[0] != "n" else "-"+ lit[1:])
-
-    with open(cnf_file, "r") as f:
-      cnf_clauses = f.readlines()
-    
-    # updating number of clauses in cnf file
-    for i in range(len(cnf_clauses)):
-      if "p cnf" in cnf_clauses[i]:
-        temp = cnf_clauses[i].split()
-        num_clauses = int(temp[-1])
-        #print(num_clauses)
-        num_clauses = num_clauses + len(decision_lits_actual)
-        temp[-1] = str(num_clauses) + "\n"
-        cnf_clauses[i] = " ".join(temp)
-        break
-    
-    # append path condition to cnf clauses
-    for lit in decision_lits_actual:
-      cnf_clauses.append( lit + " 0")
-    
-    # write out the cnf formula with path condition
-    cnf_name = "./temp-work/"+fil_name+".cnf"
-    with open(cnf_name, "w") as f:
-      write_cnf(f,cnf_clauses)
-    
-    with open(fil, "r") as f:
-      proof_lemmas = f.readlines()
-    
-    process.append(subprocess.Popen(["./drat-trim", cnf_name, fil, "-l",  fil],stdout=subprocess.DEVNULL))
   
-  for proc in process:
-    proc.wait()
-  ''' 
   ordered_proofs = order_proofs( proof_files )
   
   '''
   for o in ordered_proofs:
     print(o)
   '''
+  if optimize > 0:
+    LEMMA_LENGTH = find_global_avg( proof_files )
 
-  generate_final_proof( ordered_proofs, cnf_file, LEMMA_LENGTH, verbose )
-  '''
-  process = []
-  curr_lvl = -1
-  level = ordered_proof[0][3]
-
-  for tup in ordered_proof:
-    #read proofs
-    proof_file1 = tup[0] + ".proof"
-    proof_file2 = tup[1] + ".proof"
-    
-    curr_lvl = tup[3]
-    #print(curr_lvl) 
-    if curr_lvl < level:
-      #wait for previous processes to complete
-      #print(process)
-      print(level)
-      for proc in process:
-        proc.wait()
-
-      level = curr_lvl
-      process = []
-
-    decision_lits = proof_file1[:-6].split("_")
-    decision_lit = decision_lits[-1] if decision_lits[-1][0]!="n" else "-" + decision_lits[-1][1:]
-    decision_lits_except_last = []
-
-    for lit in decision_lits[:-1]:
-      decision_lits_except_last.append(lit if lit[0] != "n" else "-"+ lit[1:])
-
-    if len(decision_lits) > 1:
-      proof_out_file = "_".join(decision_lits[:-1]) + ".proof"
-    else:
-      proof_out_file = "final.proof"
-    
-    #print(proof_out_file)
-    temp_1 = []
-    temp_2 = []
-    proof_1 = []
-    proof_2 = []
-    proof_out = []
-    
-    with open("./temp-work/"+proof_file1,"r") as f:
-      temp_1 = f.readlines()
-
-    with open("./temp-work/"+proof_file2,"r") as f:
-      temp_2 = f.readlines()
-    
-    # delete deletion clauses
-    for l in temp_1:
-      if l[0] != "d":
-        proof_1.append(l)
-    
-    for l in temp_2:
-      if l[0] != "d":
-        proof_2.append(l)
-
-    proof_out = combine_proofs(proof_1, proof_2, decision_lit)
-    
-    with open("./temp-work/"+proof_out_file,"w") as f:
-      write_proof(f, proof_out)
+  generate_final_proof( ordered_proofs, cnf_file, LEMMA_LENGTH, optimize )
  
-    avg_lemma_length = 0.0
-
-    with open("./temp-work/"+proof_out_file,"r") as f:
-      lemma_data = f.readlines()
-      for data in lemma_data:
-        avg_lemma_length = avg_lemma_length + len(data.split())
-      avg_lemma_length = avg_lemma_length/len(lemma_data)
-
-    with open(cnf_file, "r") as f:
-      cnf_clauses = f.readlines()
-    
-    # updating number of clauses in cnf file
-    for i in range(len(cnf_clauses)):
-      if "p cnf" in cnf_clauses[i]:
-        temp = cnf_clauses[i].split()
-        num_clauses = int(temp[-1])
-        #print(num_clauses)
-        num_clauses = num_clauses + len(decision_lits_except_last)
-        temp[-1] = str(num_clauses) + "\n"
-        cnf_clauses[i] = " ".join(temp)
-        break
-    
-    # append path condition to cnf clauses
-    for lit in decision_lits_except_last:
-      cnf_clauses.append( lit + " 0")
-
-    # write out the cnf formula with path condition
-    cnf_name = "./temp-work/"+proof_out_file+".cnf"
-    with open(cnf_name, "w") as f:
-      write_cnf(f,cnf_clauses)
-    
-
-    if avg_lemma_length > LEMMA_LENGTH:
-      process.append(subprocess.Popen(["./drat-trim", cnf_name, "./temp-work/"+proof_out_file, "-l", "./temp-work/"+proof_out_file],stdout=subprocess.DEVNULL))
-    ''' 
