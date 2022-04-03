@@ -15,7 +15,7 @@ Clone repository to any linux-based system
 
 ### Usage
 
-  python3 proof_optimizer.py <CNF FILE> <DIRECTORY CONTAINING PROOFS> <OPTIMIZATION LEVEL>
+  python3 proof_optimizer.py CNF_FILE DIRECTORY_CONTAINING_PROOFS OPTIMIZATION_LEVEL
 
 OPTIMIZATION LEVEL : <0, 1, 2>
 0: No Optimization. All proofs in directory are concatenated together without attempting to reduce their size.
