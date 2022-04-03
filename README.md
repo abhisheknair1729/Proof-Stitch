@@ -1,4 +1,4 @@
-# Clausal Proof Optimizer
+# Proof Optimizer for Cube-and-Conquer SAT solvers
 
 ### Description
 
