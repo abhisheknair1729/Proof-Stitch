@@ -272,10 +272,12 @@ if __name__ == "__main__":
   # Move all files to temp-work dir
   if os.path.exists("./temp-work"):
     shutil.rmtree("./temp-work")
+  
   os.mkdir("./temp-work")
   for f in proof_files:
     shutil.copy(f, "./temp-work/")
   
+  # Read Proof Files
   proof_files = glob.glob("./temp-work/*.proof")
 
   if proof_files is None:
@@ -287,10 +289,6 @@ if __name__ == "__main__":
   
   ordered_proofs = order_proofs( proof_files )
   
-  '''
-  for o in ordered_proofs:
-    print(o)
-  '''
   if optimize > 0:
     LEMMA_LENGTH = find_global_avg( proof_files )
 
