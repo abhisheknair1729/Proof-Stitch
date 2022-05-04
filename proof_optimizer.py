@@ -159,7 +159,7 @@ def optimize_orig_proofs( proof_list, cnf_file ):
     cnf_name = create_cnf( cnf_file, lits, True )
     with open(proof, "r") as f:
       proof_lemmas = f.readlines()
-    process.append( subprocess.Popen( ["./drat-trim", cnf_name, proof, "-l",  proof], stdout=subprocess.DEVNULL ) )
+    process.append( subprocess.Popen( ["./drat-trim", cnf_name, proof, "-l",  proof, "-t", "600"], stdout=subprocess.DEVNULL ) )
   
   for proc in process:
     proc.wait()
@@ -239,10 +239,10 @@ def generate_final_proof( ordered_proofs, cnf_name, LEMMA_LENGTH, optimize ):
 
     if avg_lemma_length > LEMMA_LENGTH:
       if optimize == 1:
-        process.append( subprocess.Popen(["./drat-trim", cnf_name, proof_path+proof_out_file, "-l", proof_path+proof_out_file], stdout=subprocess.DEVNULL ) )
+        process.append( subprocess.Popen(["./drat-trim", cnf_name, proof_path+proof_out_file, "-l", proof_path+proof_out_file, "-t", "600" ], stdout=subprocess.DEVNULL ) )
       
     if optimize == 2:
-      process.append( subprocess.Popen(["./drat-trim", cnf_name, proof_path+proof_out_file, "-l", proof_path+proof_out_file],  stdout=subprocess.DEVNULL ))
+      process.append( subprocess.Popen(["./drat-trim", cnf_name, proof_path+proof_out_file, "-l", proof_path+proof_out_file, "-t", "600"],  stdout=subprocess.DEVNULL ))
    
   for proc in process:
     proc.wait()
@@ -285,7 +285,8 @@ if __name__ == "__main__":
     print("Proof files must have extension .proof")
     sys.exit(0)
   
-  optimize_orig_proofs( proof_files, cnf_file )
+  if optimize > 0:
+    optimize_orig_proofs( proof_files, cnf_file )
   
   ordered_proofs = order_proofs( proof_files )
   
